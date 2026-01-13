@@ -373,7 +373,7 @@
              data-song-id="{{ $song->id }}"
              data-song-title="{{ $song->title }}"
              data-song-artist="{{ $song->artist }}"
-             data-song-url="{{ asset($song->getCleanFilePath()) }}"
+             data-song-url="{{ asset($song->file_path) }}"
              data-song-duration="{{ $song->duration }}"
              data-song-index="{{ $index }}">
             <div class="song-number">{{ $index + 1 }}</div>

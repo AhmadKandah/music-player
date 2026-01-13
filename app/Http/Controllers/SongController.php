@@ -23,7 +23,7 @@ class SongController extends Controller
             'id' => $song->id,
             'title' => $song->title,
             'artist' => $song->artist,
-            'url' => asset($song->getCleanFilePath()),
+            'url' => asset($song->file_path),
             'duration' => $song->duration
         ];
     })->toJson();
@@ -119,19 +119,10 @@ class SongController extends Controller
     public function destroy(Song $song)
     {
         try {
-            // تنظيف المسار للتعامل مع المسارات القديمة والجديدة
-            $filePath = $song->getCleanFilePath();
-            
-            // حذف الملف من public/
-            $fullPath = public_path($filePath);
-            if (file_exists($fullPath)) {
-                unlink($fullPath);
-            }
-            
-            // أيضاً حاول حذف من storage إذا كان موجوداً (للمسارات القديمة)
-            $storagePath = storage_path('app/public/' . $filePath);
-            if (file_exists($storagePath)) {
-                unlink($storagePath);
+            // حذف الملف من public/songs/
+            $filePath = public_path($song->file_path);
+            if (file_exists($filePath)) {
+                unlink($filePath);
             }
             
             // حذف من قاعدة البيانات
@@ -151,24 +142,12 @@ class SongController extends Controller
      */
     public function play(Song $song)
     {
-        // تنظيف المسار للتعامل مع المسارات القديمة والجديدة
-        $filePath = $song->getCleanFilePath();
+        $filePath = public_path($song->file_path);
         
-        // محاولة الوصول من public أولاً
-        $fullPath = public_path($filePath);
-        
-        // إذا لم يوجد في public، جرب storage (للمسارات القديمة)
-        if (!file_exists($fullPath)) {
-            $storagePath = storage_path('app/public/' . $filePath);
-            if (file_exists($storagePath)) {
-                $fullPath = $storagePath;
-            }
-        }
-        
-        if (!file_exists($fullPath)) {
+        if (!file_exists($filePath)) {
             abort(404, 'ملف الصوت غير موجود');
         }
         
-        return response()->file($fullPath);
+        return response()->file($filePath);
     }
 }
