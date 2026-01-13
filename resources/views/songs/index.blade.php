@@ -235,7 +235,7 @@
                  data-song-id="{{ $song->id }}"
                  data-song-title="{{ $song->title }}"
                  data-song-artist="{{ $song->artist }}"
-                 data-song-url="{{ asset('storage/' . $song->file_path) }}"
+                 data-song-url="{{ asset($song->getCleanFilePath()) }}"
                  data-song-duration="{{ $song->duration ?? 0 }}">
                 <div class="song-cover">
                     <i class="fas fa-music"></i>
@@ -308,7 +308,7 @@
          data-id="{{ $song->id }}"
          data-title="{{ $song->title }}"
          data-artist="{{ $song->artist }}"
-         data-url="{{ asset('storage/' . $song->file_path) }}"
+         data-url="{{ asset($song->getCleanFilePath()) }}"
          data-duration="{{ $song->duration ?? 0 }}">
     </div>
     @endforeach

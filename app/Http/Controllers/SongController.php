@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Song;
 use App\Models\Playlist;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class SongController extends Controller
 {
@@ -24,7 +23,7 @@ class SongController extends Controller
             'id' => $song->id,
             'title' => $song->title,
             'artist' => $song->artist,
-            'url' => asset('storage/' . $song->file_path),
+            'url' => asset($song->getCleanFilePath()),
             'duration' => $song->duration
         ];
     })->toJson();
@@ -79,9 +78,18 @@ class SongController extends Controller
                     ->withInput();
             }
 
-            // 5. حفظ الملف
+            // 5. حفظ الملف في public/songs/
             $fileName = time() . '_' . preg_replace('/[^A-Za-z0-9\-_.]/', '', $file->getClientOriginalName());
-            $filePath = $file->storeAs('songs', $fileName, 'public');
+            $publicPath = public_path('songs');
+            
+            // إنشاء مجلد songs إذا لم يكن موجوداً
+            if (!file_exists($publicPath)) {
+                mkdir($publicPath, 0755, true);
+            }
+            
+            // نقل الملف إلى public/songs/
+            $file->move($publicPath, $fileName);
+            $filePath = 'songs/' . $fileName;
 
             // 6. إنشاء الأغنية في قاعدة البيانات
             $song = Song::create([
@@ -111,9 +119,19 @@ class SongController extends Controller
     public function destroy(Song $song)
     {
         try {
-            // حذف الملف من التخزين
-            if (Storage::disk('public')->exists($song->file_path)) {
-                Storage::disk('public')->delete($song->file_path);
+            // تنظيف المسار للتعامل مع المسارات القديمة والجديدة
+            $filePath = $song->getCleanFilePath();
+            
+            // حذف الملف من public/
+            $fullPath = public_path($filePath);
+            if (file_exists($fullPath)) {
+                unlink($fullPath);
+            }
+            
+            // أيضاً حاول حذف من storage إذا كان موجوداً (للمسارات القديمة)
+            $storagePath = storage_path('app/public/' . $filePath);
+            if (file_exists($storagePath)) {
+                unlink($storagePath);
             }
             
             // حذف من قاعدة البيانات
@@ -133,12 +151,24 @@ class SongController extends Controller
      */
     public function play(Song $song)
     {
-        $filePath = storage_path('app/public/' . $song->file_path);
+        // تنظيف المسار للتعامل مع المسارات القديمة والجديدة
+        $filePath = $song->getCleanFilePath();
         
-        if (!file_exists($filePath)) {
+        // محاولة الوصول من public أولاً
+        $fullPath = public_path($filePath);
+        
+        // إذا لم يوجد في public، جرب storage (للمسارات القديمة)
+        if (!file_exists($fullPath)) {
+            $storagePath = storage_path('app/public/' . $filePath);
+            if (file_exists($storagePath)) {
+                $fullPath = $storagePath;
+            }
+        }
+        
+        if (!file_exists($fullPath)) {
             abort(404, 'ملف الصوت غير موجود');
         }
         
-        return response()->file($filePath);
+        return response()->file($fullPath);
     }
 }
